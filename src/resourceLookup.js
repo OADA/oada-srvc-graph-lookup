@@ -27,7 +27,8 @@ let recursiveQuery = function(urlArray, i, resource_id) {
       edges FILTER e.name == ${urlArray[i+1]}
     RETURN v`
   ).then((cursor) => {
-    return recursiveQuery(urlArray,i+1,cursor._result[0].resource_id)
-  }) 
+    if (cursor._result.length > 0) {
+      return recursiveQuery(urlArray,i+1,cursor._result[0].resource_id)
+    } else return resource_id
+  })
 }
-
