@@ -54,7 +54,7 @@ var createGraphNode = function createGraphNode(resourceId, isResource) {
 
 
 var addData = function addData() {
-  return createDb.destory().then(() => {
+  return createDb.destroy().then(() => {
     return createDb.create();
   }).then(()=> {
     return createRocks.then(function(rocks) {
