@@ -75,14 +75,30 @@ var addData = function addData() {
         });
         return createResource(rocksResource).then((rocksResourceSaved) => {
           rocksResource = _.merge({}, rocksResource, rocksResourceSaved);
-          var a = createResource({_key: '6', rocks: {_id: rocksResource._id}});
+          //Create resource for bookmarks
+          var a = createResource({_key: '6', rocks: {_id: rocksResource._id}}).then(function(r) {
+            //Create gNode for bookmarks
+            return createGraphNode(r._key, true);
+          });
+          //Create gNode for rocksResource
+          var b = createGraphNode(rocksResource._key, true);
+
+          var c = Promise.all([a,b]).spread(function(aNode, bNode) {
+            //Create link from aNode to bNode with name: rocks
+            return edges.save({
+              _to: bNode._id,
+              _from: aNode._id,
+              name: 'rocks'
+            });
+          });
+
           //Create 'rocks-index' gNode
-          var b = createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
+          var d = createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
             //Create edge for rocks resource to rocksIndex resource
             return edges.save({
               _to: rockIndexGnode._id,
               _from: rocksResource._id,
-              name: 'rocks-index',
+              name: 'rocks-index'
             }).then(function() {
               //Create edges for rocks
               return Promise.map(Object.keys(rocksResource['rocks-index']), function(key) {
@@ -94,7 +110,8 @@ var addData = function addData() {
               });
             });
           });
-          return Promise.all([a,b]);
+
+          return Promise.all([c,d]);
         })
       });
     });
