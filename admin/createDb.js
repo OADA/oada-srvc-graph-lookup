@@ -4,8 +4,9 @@ let Database = arangojs.Database;
 let aql = arangojs.aql;
 let Promise = require('bluebird');
 let debug = require('debug')('graph-lookup:admin:createDb');
-let serverAddr = process.env.ARANGODB_SERVER ? process.env.ARANGODB_SERVER : "http://localhost:8529";
 let ADD_SAMPLE_DATA = process.env.ADD_SAMPLE_DATA
+let config = require('../config.js')
+let serverAddr = config.get('arango:connectionString') 
 let db = new Database(serverAddr);
 /*
   Creates Database.
@@ -46,9 +47,6 @@ let graphNodes = db.collection('graphNodes');
 let edges = db.edgeCollection('edges');
 
 //Clear out any data that exists already.
-resources.drop();
-graphNodes.drop();
-edges.drop();
 
 var createDb = function createDB() {
   debug('Creating collections in database.');
@@ -69,12 +67,14 @@ var destroyDb = function destroyDb() {
 
 if (require.main === module) {
   console.log('Creating collections in database.');
-  return destroyDb().then(() => {
+  return destroyDb().catch(()=>{
+  
+  }).then(() => {
     return createDb();
   });
 }
 
-modules.exports = {
+module.exports = {
   create: createDb,
   destroy: destroyDb,
   collections: {
