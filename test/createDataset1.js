@@ -52,43 +52,54 @@ var createGraphNode = function createGraphNode(resourceId, isResource) {
   return resources.save(data);
 }
 
-return createDb.destory().then(() => {
-  return createDb.create();
-}).then(()=> {
-  return createRocks.then(function(rocks) {
-    return Promise.map(rocks, function(rock) {
-      //Create graph node for each rock
-      return createGraphNode(rock._key, true);
-    }).then((gNodes)=>{
-      //Create 'Rocks' resource
-      var rocksResource = {
-        'rocks-index': {}
-      };
-      _.forEach(rocks, function(rock) {
-        rocksResource['rocks-index'][uuid()] = {
-          _id: rock._key
-        }
-      });
-      return createResource(rocksResource).then(() => {
-        //Create 'rocks-index' gNode
-        return createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
-          //Create edge for rocks resource to rocksIndex resource
-          return edges.save({
-            _to: rockIndexGnode._key,
-            _from: rocksResource._key,
-            name: 'rocks-index'
-          }).then(function() {
-            //Create edges for rocks
-            return Promise.map(rocksResource['rocks-index'], function(rockResourceKey, key) {
-              return edges.save({
-                _to: rockResourceKey._id,
-                _from: rockIndexGnode._key,
-                name: key
+
+var addData = function addData() {
+  return createDb.destory().then(() => {
+    return createDb.create();
+  }).then(()=> {
+    return createRocks.then(function(rocks) {
+      return Promise.map(rocks, function(rock) {
+        //Create graph node for each rock
+        return createGraphNode(rock._key, true);
+      }).then((gNodes)=>{
+        //Create 'Rocks' resource
+        var rocksResource = {
+          'rocks-index': {}
+        };
+        _.forEach(rocks, function(rock) {
+          rocksResource['rocks-index'][uuid()] = {
+            _id: rock._key
+          }
+        });
+        return createResource(rocksResource).then(() => {
+          //Create 'rocks-index' gNode
+          return createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
+            //Create edge for rocks resource to rocksIndex resource
+            return edges.save({
+              _to: rockIndexGnode._key,
+              _from: rocksResource._key,
+              name: 'rocks-index'
+            }).then(function() {
+              //Create edges for rocks
+              return Promise.map(rocksResource['rocks-index'], function(rockResourceKey, key) {
+                return edges.save({
+                  _to: rockResourceKey._id,
+                  _from: rockIndexGnode._key,
+                  name: key
+                });
               });
             });
           });
-        });
-      })
+        })
+      });
     });
   });
-});
+}
+
+if (require.main === module) {
+  console.log('Adding Dataset1 to the database.');
+  return addData();
+}
+modules.exports = {
+  addData: addData
+};
