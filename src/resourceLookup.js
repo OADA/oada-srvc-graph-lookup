@@ -22,7 +22,7 @@ let recursiveQuery = function(urlArray, i, resource_id) {
   console.log(urlArray, i, resource_id)
   return db.query(aql`
     FOR v, e IN 1..1
-      OUTBOUND "graphNode/6"
+      OUTBOUND "graphNodes/6"
       edges FILTER e.name == "rocks"
     RETURN v`
   ).then((cursor) => {
