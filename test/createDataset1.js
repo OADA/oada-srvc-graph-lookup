@@ -1,7 +1,7 @@
-let createDb = require('../createDb.js');
+let createDb = require('../admin/createDb.js');
 let _ = require('lodash');
-let uuid = require('uuid/v4');
-let {resources, graphNodes, edges} = createDb.resources;
+let Promise = require('bluebird')
+let {resources, graphNodes, edges} = createDb.collections;
 
 /*
   /resources/6/rocks/rocks-index/123
@@ -23,8 +23,9 @@ let {resources, graphNodes, edges} = createDb.resources;
   }
 
 */
+var rockRandNumber=1;
 var createResource = function createResource(data) {
-  var data = _.merge({}, {_oada_rev: "0-0"}, data);
+  data = _.merge({}, {_oada_rev: "0-0"}, data);
   return resources.save(data).then((resource)=> {
     return resources.update(resource, {
       _meta: {
@@ -42,22 +43,22 @@ var createRocks = function createRocks() {
     }
   ];
   return Promise.map(rocks, (rock)=>{
-    return createResource(data);
+    return createResource(rock);
   });
 }
 
 var createGraphNode = function createGraphNode(resourceId, isResource) {
-  isResource = (isResource == null) ? true : false;
+  isResource = (isResource == null || isResource) ? true : false;
   var data = _.merge({}, {resource_id: resourceId, is_resource: isResource});
-  return resources.save(data);
+  return graphNodes.save(data);
 }
 
-
 var addData = function addData() {
+
   return createDb.destroy().then(() => {
     return createDb.create();
   }).then(()=> {
-    return createRocks.then(function(rocks) {
+    return createRocks().then(function(rocks) {
       return Promise.map(rocks, function(rock) {
         //Create graph node for each rock
         return createGraphNode(rock._key, true);
@@ -67,29 +68,53 @@ var addData = function addData() {
           'rocks-index': {}
         };
         _.forEach(rocks, function(rock) {
-          rocksResource['rocks-index'][uuid()] = {
+          rocksResource['rocks-index'][rockRandNumber] = {
             _id: rock._key
           }
+          rockRandNumber++;
         });
-        return createResource(rocksResource).then(() => {
-          //Create 'rocks-index' gNode
-          return createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
-            //Create edge for rocks resource to rocksIndex resource
-            return edges.save({
-              _to: rockIndexGnode._key,
-              _from: rocksResource._key,
-              name: 'rocks-index'
-            }).then(function() {
-              //Create edges for rocks
-              return Promise.map(rocksResource['rocks-index'], function(rockResourceKey, key) {
-                return edges.save({
-                  _to: rockResourceKey._id,
-                  _from: rockIndexGnode._key,
-                  name: key
+        return createResource(rocksResource).then((rocksResourceSaved) => {
+          rocksResource = _.merge({}, rocksResource, rocksResourceSaved);
+          //Create resource for bookmarks
+          var a = createResource({_key: '6', rocks: {_id: rocksResource._id}}).then(function(r) {
+            //Create gNode for bookmarks
+            return createGraphNode(r._key, true);
+          });
+          //Create gNode for rocksResource
+          var b = createGraphNode(rocksResource._key, true);
+
+          var rocksResourceGnode;
+          var c = Promise.all([a,b]).spread(function(aNode, rocksResourceGnode) {
+            //Create 'rocks-index' gNode
+            var d = createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
+              console.log(rocksResource)
+              //Create edge for rocks resource to rocksIndex resource
+              return edges.save({
+                _to: rockIndexGnode._id,
+                _from: rocksResourceGnode._id,
+                name: 'rocks-index'
+              }).then(function() {
+                //Create edges for rocks
+                return Promise.map(gNodes, function(rockGnode) {
+                  var m = _.findKey(rocksResource['rocks-index'], rockGnode.resource_id);
+                  console.log(m)
+                  return edges.save({
+                    _to: rockGnode._id,
+                    _from: rockIndexGnode._id,
+                    name: m 
+                  });
                 });
               });
             });
+
+            //Create link from aNode to bNode with name: rocks
+            return edges.save({
+              _to: rocksResourceGnode._id,
+              _from: aNode._id,
+              name: 'rocks'
+            });
           });
+          return Promise.all([c]);
         })
       });
     });
@@ -100,6 +125,6 @@ if (require.main === module) {
   console.log('Adding Dataset1 to the database.');
   return addData();
 }
-modules.exports = {
+module.exports = {
   addData: addData
 };
