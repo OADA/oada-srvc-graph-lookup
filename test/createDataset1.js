@@ -83,35 +83,38 @@ var addData = function addData() {
           //Create gNode for rocksResource
           var b = createGraphNode(rocksResource._key, true);
 
-          var c = Promise.all([a,b]).spread(function(aNode, bNode) {
+          var rocksResourceGnode;
+          var c = Promise.all([a,b]).spread(function(aNode, rocksResourceGnode) {
+            //Create 'rocks-index' gNode
+            var d = createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
+              console.log(rocksResource)
+              //Create edge for rocks resource to rocksIndex resource
+              return edges.save({
+                _to: rockIndexGnode._id,
+                _from: rocksResourceGnode._id,
+                name: 'rocks-index'
+              }).then(function() {
+                //Create edges for rocks
+                return Promise.map(gNodes, function(rockGnode) {
+                  var m = _.findKey(rocksResource['rocks-index'], rockGnode.resource_id);
+                  console.log(m)
+                  return edges.save({
+                    _to: rockGnode._id,
+                    _from: rockIndexGnode._id,
+                    name: m 
+                  });
+                });
+              });
+            });
+
             //Create link from aNode to bNode with name: rocks
             return edges.save({
-              _to: bNode._id,
+              _to: rocksResourceGnode._id,
               _from: aNode._id,
               name: 'rocks'
             });
           });
-
-          //Create 'rocks-index' gNode
-          var d = createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
-            //Create edge for rocks resource to rocksIndex resource
-            return edges.save({
-              _to: rockIndexGnode._id,
-              _from: rocksResource._id,
-              name: 'rocks-index'
-            }).then(function() {
-              //Create edges for rocks
-              return Promise.map(Object.keys(rocksResource['rocks-index']), function(key) {
-                return edges.save({
-                  _to: 'resources/'+rocksResource['rocks-index'][key]._id,
-                  _from: rockIndexGnode._id,
-                  name: key
-                });
-              });
-            });
-          });
-
-          return Promise.all([c,d]);
+          return Promise.all([c]);
         })
       });
     });
