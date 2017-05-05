@@ -87,7 +87,6 @@ var addData = function addData() {
           var c = Promise.all([a,b]).spread(function(aNode, rocksResourceGnode) {
             //Create 'rocks-index' gNode
             var d = createGraphNode(rocksResource._key, false).then((rockIndexGnode)=> {
-              console.log(rocksResource)
               //Create edge for rocks resource to rocksIndex resource
               return edges.save({
                 _to: rockIndexGnode._id,
@@ -97,7 +96,6 @@ var addData = function addData() {
                 //Create edges for rocks
                 return Promise.map(gNodes, function(rockGnode) {
                   var m = _.findKey(rocksResource['rocks-index'], rockGnode.resource_id);
-                  console.log(m)
                   return edges.save({
                     _to: rockGnode._id,
                     _from: rockIndexGnode._id,

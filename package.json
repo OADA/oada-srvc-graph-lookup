@@ -15,6 +15,7 @@
     "arangojs": "^5.6.1",
     "bluebird": "^3.5.0",
     "debug": "^2.6.6",
+    "json-pointer": "^0.6.0",
     "lodash": "^4.17.4",
     "nconf": "^0.8.4",
     "uuid": "^3.0.1"
