@@ -6,6 +6,7 @@ let Database = arangojs.Database;
 let config = require('../config.js')
 let server_addr = config.get('arango:connectionString');
 let db = new Database(server_addr);
+db.useDatabase('graph-lookup-test')
 let pointer = require('json-pointer');
 let _ = require('lodash')
 
@@ -36,7 +37,7 @@ let recursiveQuery = function(urlArray, i, graphNodeId, leftoverPath) {
     if (i == urlArray.length-1) {
 //Return the leftoverPath
       leftoverPath = (cursor._result[0].is_resource) ? '' : leftoverPath+'/'+urlArray[i]
-      return {resource_id: graphNodeId, leftover_path}
+      return {resource_id: graphNodeId, path_left}
     } else if (cursor._result.length > 0) {
       leftoverPath = (cursor._result[0].is_resource) ? '' : leftoverPath+'/'+urlArray[i]
       return recursiveQuery(urlArray,i+1,cursor._result[0]._key, leftoverPath)
@@ -44,16 +45,14 @@ let recursiveQuery = function(urlArray, i, graphNodeId, leftoverPath) {
   })
 }
 
-let resIdFromUrl = function(url) {
+let lookupFromUrl = function(url) {
   let pieces = pointer.parse(url)
   pieces.splice(0, 1)
   let bindVars = {
     value0: pieces.length-1,
     value1: 'graphNodes/'+pieces[0],
   }
-  console.log('bindVars', bindVars)
   pieces.splice(0, 1)
-  console.log(pieces)
 // Create a filter for each segment of the url
   const filters = pieces.map((urlPiece, i) => {
     let bindVarA = 'value' + (2+(i*2)).toString()
@@ -67,40 +66,28 @@ let resIdFromUrl = function(url) {
       edges
       ${filters}
       RETURN p`
-  console.log(query, bindVars)
   return db.query({query, bindVars})
 // Handle query output
   .then((cursor) => {
-    console.log('CURSOR')
-    console.log(cursor._result)
     let resource_id = ''
     let meta_id = ''
-    let leftovers = '' 
-    if (cursor._result.length < 1) return (resource_id, meta_id, leftovers)
+    let path_left = '' 
+    if (cursor._result.length < 1) return (resource_id, meta_id, path_left)
     let res =_.reduce(cursor._result, (result, value, key) => {
       if (result.vertices.length > value.vertices.length) return result
       return value
     })
     resource_id = res.vertices[res.vertices.length-1].resource_id;
     meta_id = res.vertices[res.vertices.length-1].meta_id;
-    console.log(res.vertices.length, pieces.length)
     if (res.vertices.length-1 < pieces.length) {
       let extras = pieces.length - (res.vertices.length-1)
-      console.log(pieces.slice(0-extras)) //negative value to slices off the end
-      leftovers = pointer.compile(pieces.slice(0-extras))
-    } else leftovers = res.vertices[res.vertices.length-1].path
+      path_left = pointer.compile(pieces.slice(0-extras))
+    } else path_left = res.vertices[res.vertices.length-1].path
     
-    console.log('LEFTOVERS')
-    console.log(leftovers)
-    return {resource_id, meta_id, leftovers}
-  }).catch((err) => {
-    console.log(err)
+    return {resource_id, meta_id, path_left}
   })
 }
 
 module.exports = {
-  resIdFromUrl,
+  lookupFromUrl,
 }
-
-let url = '/resources/6/rocks/rocks-index'
-return resIdFromUrl(url).then((res) => { console.log(res)})

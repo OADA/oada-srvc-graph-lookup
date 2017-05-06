@@ -7,7 +7,9 @@ let debug = require('debug')('graph-lookup:admin:createDb');
 let ADD_SAMPLE_DATA = process.env.ADD_SAMPLE_DATA
 let config = require('../config.js')
 let serverAddr = config.get('arango:connectionString') 
+let dbname = 'graph-lookup-test'
 let db = new Database(serverAddr);
+db.useDatabase(dbname)
 /*
   Creates Database.
   Can be required as module:

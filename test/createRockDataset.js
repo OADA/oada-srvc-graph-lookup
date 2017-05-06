@@ -26,6 +26,8 @@ let {resources, graphNodes, edges} = createDb.collections;
   }
 
 */
+
+console.log(resources, graphNodes, edges)
 var rockRandNumber=1;
 var createResource = function createResource(data) {
   data = _.merge({}, {_oada_rev: "0-0"}, data);
@@ -107,23 +109,23 @@ var addRocksData = function addRockData() {
                   _to: rockGnode._id,
                   _from: rockIndexGnode._id,
                   name: m 
-                });
+
+                })
               });
             });
           });
-
           //Create link from aNode to bNode with name: rocks
           return edges.save({
             _to: rocksResourceGnode._id,
             _from: aNode._id,
             name: 'rocks'
-          });
+         })
         });
         return Promise.all([c]);
       })
     });
   }).catch((err) => {
-    console.log(err) 
+    console.log('ERROR ', err) 
   })
 }
 
