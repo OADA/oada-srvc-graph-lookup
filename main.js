@@ -1,3 +1,3 @@
-var graphLookup = require('server/index.js')
+var graphLookup = require('./server/index.js')
 
 graphLookup.start()

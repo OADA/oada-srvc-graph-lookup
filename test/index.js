@@ -46,10 +46,10 @@ describe('graph-lookup service', () => {
       consumer = Promise.promisifyAll(new kf.Consumer(client, [ {topic: consTopic} ], consOptions));
 
       // Create a dummy producer of graph-request messages
-      producerFunc = Promise.promisifyAll(new kf.Producer(client, {
+      producer = Promise.promisifyAll(new kf.Producer(client, {
         partitionerType: 0
       }))
-      return producer = producerFunc 
+      return producer = producer
         .onAsync('ready')
         .return(producer)
         .tap(function(prod) {
@@ -85,9 +85,7 @@ describe('graph-lookup service', () => {
   // After tests are done, get rid of our temp database
   //-------------------------------------------------------
   after(() => {
-    consumer.close()
-//    return producer.close()
-    return init.cleanup())
+    return init.cleanup()
     .then(() => {
       console.log('Successfully cleaned up test database')
     }).catch(err => console.log('Could not drop test database after the tests! err = ', err))
