@@ -15,7 +15,8 @@
 'use strict';
 
 module.exports = {
-  arango: {
-    connectionString: 'http://arangodb:8529'
+  kafka: {
+    testProducerTopic: "graph_request",
+    testConsumerTopic: "http_response",
   }
 };

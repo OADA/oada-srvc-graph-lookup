@@ -25,10 +25,11 @@ let rocksIndexPathLeft = '/rocks-index'
 let rockPickedUrl = '/resources/default:resources_bookmarks_123/rocks/rocks-index/90j2klfdjss/picked_up'
 let rockPickedPathLeft = '/picked_up'
 
-let graphRequestProducer
-let graphRequestConsumer
-let httpRequestProducer
-let httpRequestConsumer
+let producer
+let consumer
+
+let prodTopic = config.get('kafka:testProducerTopic');
+let consTopic = config.get('kafka:testConsumerTopic');
 
 describe('graph-lookup service', () => {
   before(() => {
@@ -37,23 +38,20 @@ describe('graph-lookup service', () => {
     return init.run()
     .then(() => graphLookupService.start())
     .then(() => {
-      // Setup Kafka
       let client = Promise.promisifyAll(new kf.Client('zookeeper:2181','graph-lookup'))
       let offset = Promise.promisifyAll(new kf.Offset(client))
 
-      // Create a fake consumer of http-request
+      // Create a dummy consumer of http-response messages
       let consOptions = { autoCommit: true };
-      let consTopic = 'http_response';
-      httpRequestConsumer = Promise.promisifyAll(new kf.Consumer(client, [ {topic: consTopic} ], consOptions));
+      consumer = Promise.promisifyAll(new kf.Consumer(client, [ {topic: consTopic} ], consOptions));
 
-      // Create a fake producer of graph-request messages
-      graphRequestProducer = Promise.promisifyAll(new kf.Producer(client, {
+      // Create a dummy producer of graph-request messages
+      producerFunc = Promise.promisifyAll(new kf.Producer(client, {
         partitionerType: 0
       }))
-      graphRequestProducer.on('error', (err)=> { console.log(err)})
-      return graphRequestProducer = graphRequestProducer 
+      return producer = producerFunc 
         .onAsync('ready')
-        .return(graphRequestProducer)
+        .return(producer)
         .tap(function(prod) {
           return prod.createTopicsAsync(['graph_request'], true);
         });
@@ -68,12 +66,12 @@ describe('graph-lookup service', () => {
   //--------------------------------------------------
 
   it('should consume messages on the graph-request topic', done => {
-    graphRequestProducer.then(prod => {
+    producer.then(prod => {
       return prod.sendAsync([{
         topic: 'graph_request', 
         messages: JSON.stringify({url:rockUrl})
       }]).then(() => {
-        httpRequestConsumer.on('message', msg => {
+        consumer.on('message', msg => {
           var result = JSON.parse(msg.value)
           expect(result.resource_id).to.equal(rockResourceId)
           expect(result.meta_id).to.equal(rockMetaId)
@@ -87,9 +85,11 @@ describe('graph-lookup service', () => {
   // After tests are done, get rid of our temp database
   //-------------------------------------------------------
   after(() => {
-//    db.useDatabase('_system') // arango only lets you drop a database from the _system db
- //   return db.dropDatabase(dbname)
- //   .then(() => { console.log('Successfully cleaned up test database '+dbname) })
- //   .catch(err => console.log('Could not drop test database '+dbname+' after the tests! err = ', err))
+    consumer.close()
+//    return producer.close()
+    return init.cleanup())
+    .then(() => {
+      console.log('Successfully cleaned up test database')
+    }).catch(err => console.log('Could not drop test database after the tests! err = ', err))
   })
 })
