@@ -6,7 +6,7 @@ const kf = require('kafka-node');
 const debug = require('debug')('graph-lookup');
 const trace = require('debug')('graph-lookup:trace');
 const warning = require('debug')('graph-lookup:warning');
-const lookupFromUrl = require('../../../admin/oada-lib-arangodb/libs/resources').lookupFromUrl
+const oadaLib = require('oada-lib-arangodb')
 const config = require('../config')
 
 function start() {
@@ -34,7 +34,7 @@ function start() {
     var requests = {};
     consumer.on('message', function(msg) {
       var resp = JSON.parse(msg.value);
-      return lookupFromUrl(resp.url).then((result) => {
+      return oadaLib.resources.lookupFromUrl(resp.url).then((result) => {
         return producer.then(function sendTokReq(prod) {
           return prod.sendAsync([{
             topic: 'http_response',

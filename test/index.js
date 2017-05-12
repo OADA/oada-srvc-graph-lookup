@@ -7,7 +7,7 @@ const debug = require('debug')
 const kf = require('kafka-node');
 const config = require('../config')
 config.set('isTest', true)
-const init = require('../../../admin/oada-lib-arangodb/init')
+const oadaLib = require('oada-lib-arangodb')
 const graphLookupService = require('../server')
 
 // Tests for the arangodb driver:
@@ -35,7 +35,7 @@ describe('graph-lookup service', () => {
   before(() => {
 
     // Create the test database (with necessary collections and dummy data)
-    return init.run()
+    return oadaLib.init.run()
     .then(() => graphLookupService.start())
     .then(() => {
       let client = Promise.promisifyAll(new kf.Client('zookeeper:2181','graph-lookup'))
@@ -85,7 +85,7 @@ describe('graph-lookup service', () => {
   // After tests are done, get rid of our temp database
   //-------------------------------------------------------
   after(() => {
-    return init.cleanup()
+    return oadaLib.init.cleanup()
     .then(() => {
       console.log('Successfully cleaned up test database')
     }).catch(err => console.log('Could not drop test database after the tests! err = ', err))
