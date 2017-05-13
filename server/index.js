@@ -15,7 +15,7 @@ function start() {
     var client = new kf.Client('zookeeper:2181','graph-lookup');
     var offset = Promise.promisifyAll(new kf.Offset(client));
     var producer = Promise.promisifyAll(new kf.Producer(client, {
-      partitionerType: 0 
+      partitionerType: 0
     }));
     var consumer = Promise.promisifyAll(new kf.ConsumerGroup({
       host: 'zookeeper:2181',
@@ -30,14 +30,15 @@ function start() {
       .tap(function(prod) {
         return prod.createTopicsAsync(['http_response'], true);
       });
-  
+
     var requests = {};
     consumer.on('message', function(msg) {
       var resp = JSON.parse(msg.value);
       return oadaLib.resources.lookupFromUrl(resp.url).then((result) => {
         return producer.then(function sendTokReq(prod) {
+          result.connection_id = resp.connection_id;
           return prod.sendAsync([{
-            topic: 'http_response',
+            topic: config.get('kafka:topics:httpResponse'),
             messages: JSON.stringify(result)
           }]);
         }).then(() => {
